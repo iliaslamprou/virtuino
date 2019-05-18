@@ -1,8 +1,9 @@
 /* Virtuino Ethernet Shield web server library
  * Created by Ilias Lamprou
- * Updated May 1 2017
+ * Modify by Rico Schumann
+ * Updated 16/05/2019
  * 
- * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.javapapers.android.agrofarmlitetrial
+ * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.javapapers.android.agrofarmlitetrial ???
  * Contact address for questions or comments: iliaslampr@gmail.com
  */
 
@@ -28,8 +29,8 @@
  
 //====================================================================================== VirtuinoEthernet_WebServer init
 //======================================================================================
-  VirtuinoEthernet_WebServer::VirtuinoEthernet_WebServer(int port){
-  serverPort=port;
+  VirtuinoEthernet_WebServer::VirtuinoEthernet_WebServer(EthernetServer *VirtuinoServer){
+  MyServer = VirtuinoServer;
 }
 
  
@@ -38,9 +39,7 @@
 //====================================================================================== run
 //======================================================================================
  void VirtuinoEthernet_WebServer::run(){
-    EthernetServer server(serverPort);  
-    server.begin();
-    EthernetClient client = server.available();
+    EthernetClient client = MyServer->available();
   if (client) {
     char c;
    if (DEBUG) Serial.println(et_clientConnected);
@@ -75,7 +74,8 @@
              lineBuffer="";
         } // if c=='\n'
     } // if client.available
-    delay(1);
+    delay(5);
+	client.flush();
     client.stop();  // close the connection:
     if (DEBUG) Serial.println(et_clientDisconnected);
   }
@@ -406,22 +406,22 @@ void VirtuinoEthernet_WebServer::sendText(byte ID, String text){
 
        case 'D':
             if ((activeCommandPin>=0) & (activeCommandPin<et_virtualDigitalMemorySize)){ 
-                if (returnInfo) response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(virtualDigitalMemory[activeCommandPin])+et_COMMAND_END_CHAR;  // response 
+                if (returnInfo) response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(VirtuinoEthernet_WebServer::vDigitalMemoryRead(activeCommandPin))+et_COMMAND_END_CHAR;  // response 
                 else{
                       activeCommandValue = getCommandValue(commandString);
-                      virtualDigitalMemory[activeCommandPin]= activeCommandValue; 
-                      response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(virtualDigitalMemory[activeCommandPin])+et_COMMAND_END_CHAR;  // response 
+                      VirtuinoEthernet_WebServer::vDigitalMemoryWrite(activeCommandPin, activeCommandValue); 
+                      response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(VirtuinoEthernet_WebServer::vDigitalMemoryRead(activeCommandPin))+et_COMMAND_END_CHAR;  // response 
                 }// else    response =getErrorCommand(et_ERROR_VALUE);
             } else   response =getErrorCommand(et_ERROR_PIN);  // response  error pin number   !E00=1$   
             break; 
       
        case 'V': 
            if ((activeCommandPin>=0) & (activeCommandPin<et_virtualAnalogMemorySize)){
-               if (returnInfo) response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(virtualFloatMemory[activeCommandPin])+et_COMMAND_END_CHAR;  // response
+               if (returnInfo) response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(VirtuinoEthernet_WebServer::vMemoryRead(activeCommandPin))+et_COMMAND_END_CHAR;  // response
                else { 
                     activeCommandValue = getCommandValue(commandString);
-                    virtualFloatMemory[activeCommandPin]= activeCommandValue; 
-                    response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(virtualFloatMemory[activeCommandPin])+et_COMMAND_END_CHAR;  // response
+                   	VirtuinoEthernet_WebServer::vMemoryWrite(activeCommandPin, activeCommandValue);
+                    response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(VirtuinoEthernet_WebServer::vMemoryRead(activeCommandPin))+et_COMMAND_END_CHAR;  // response
                     } 
            } else   response =getErrorCommand(et_ERROR_PIN);
           break;
@@ -463,7 +463,8 @@ void VirtuinoEthernet_WebServer::sendText(byte ID, String text){
 //====================================================================================== getPinValue
 //======================================================================================
 int VirtuinoEthernet_WebServer::getPinValue(int pin){
-  if (pin>=0 && pin<et_arduinoPinsSize) return arduinoPinsValue[pin];
+  if (pin>=0 && pin<et_arduinoPinsSize)
+	  return arduinoPinsValue[pin];
   else return 0;
   }
 
@@ -471,6 +472,9 @@ int VirtuinoEthernet_WebServer::getPinValue(int pin){
 //======================================================================================
  void VirtuinoEthernet_WebServer::vDigitalMemoryWrite(int digitalMemoryIndex, int value){
   if ((digitalMemoryIndex>=0) && (digitalMemoryIndex<et_virtualDigitalMemorySize)){
+	  
+	  // hear you can also write a Routine, to save the Value in a external SRAM and save dynamical memory!!!
+	  
     virtualDigitalMemory[digitalMemoryIndex]=value;
     
   }
@@ -479,7 +483,10 @@ int VirtuinoEthernet_WebServer::getPinValue(int pin){
 //====================================================================================== vDigitalMemoryRead
 //======================================================================================
  int VirtuinoEthernet_WebServer::vDigitalMemoryRead(int digitalMemoryIndex){
-  if ((digitalMemoryIndex>=0) && (digitalMemoryIndex<et_virtualDigitalMemorySize)){
+  if ((digitalMemoryIndex>=0) & digitalMemoryIndex<et_virtualDigitalMemorySize){
+	  
+	   // hear you can also write a Routine, to read the Value from a external SRAM and save dynamical memory!!!
+	  
     return virtualDigitalMemory[digitalMemoryIndex];
   }
   else return 0;    // error
@@ -489,7 +496,10 @@ int VirtuinoEthernet_WebServer::getPinValue(int pin){
 //======================================================================================
 // This void must not be called more than two times per second
 void VirtuinoEthernet_WebServer::vMemoryWrite(int memoryIndex, float value){
-  if ((memoryIndex>=0) && (memoryIndex<et_virtualAnalogMemorySize)){
+  if ((memoryIndex>=0) & memoryIndex<et_virtualAnalogMemorySize){
+	  
+	   // hear you can also write a Routine, to save the Value in a external SRAM and save dynamical memory!!!
+	  
       virtualFloatMemory[memoryIndex]=value;
   }
 }
@@ -497,7 +507,10 @@ void VirtuinoEthernet_WebServer::vMemoryWrite(int memoryIndex, float value){
 //====================================================================================== vMemoryRead
 //======================================================================================
  float VirtuinoEthernet_WebServer::vMemoryRead(int memoryIndex){
-  if ((memoryIndex>=0) && (memoryIndex<et_virtualAnalogMemorySize)){
+  if ((memoryIndex>=0) & memoryIndex<et_virtualAnalogMemorySize){
+	  
+	   // hear you can also write a Routine, to read the Value from a external SRAM and save dynamical memory!!!
+	  
     return virtualFloatMemory[memoryIndex];
   }
   else return 0;    // error

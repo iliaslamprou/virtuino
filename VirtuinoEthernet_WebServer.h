@@ -1,8 +1,9 @@
-/* Virtuino Ethernet Shield web server library ver 1.70
+/* Virtuino Ethernet Shield web server library ver 1.7.1
  * Created by Ilias Lamprou
- * Updated Noe/11/2017
+ * Modify by Rico Schumann
+ * Updated 16/05/2019
  * 
- * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.javapapers.android.agrofarmlitetrial
+ * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.javapapers.android.agrofarmlitetrial ???
  * Getting starting link:
  * Video tutorial link: 
  * Contact address for questions or comments: iliaslampr@gmail.com
@@ -69,7 +70,7 @@
 
 
 
-  #define  et_firmwareCode  "!C00=1.70$"                 
+  #define  et_firmwareCode  "!C00=1.7.1$"                 
   #define  et_virtualDigitalMemorySize  32       // DV virtual memory size 
   #define  et_virtualAnalogMemorySize  32        // V virtual memory size 
 
@@ -94,7 +95,7 @@
 
  class VirtuinoEthernet_WebServer {
   public:
-    VirtuinoEthernet_WebServer(int port);
+    VirtuinoEthernet_WebServer(EthernetServer *VirtuinoServer);
     void run();
     void vDigitalMemoryWrite(int digitalMemoryIndex, int value);
     int  vDigitalMemoryRead(int digitalMemoryIndex);
@@ -116,6 +117,7 @@
   
   
     private:
+	  EthernetServer *MyServer; 
     void checkVirtuinoCommand(String* command);
     char  getCommandType(char c);
     int  getCommandPin(String* aCommand);
