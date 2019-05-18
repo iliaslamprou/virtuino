@@ -2,7 +2,7 @@
 /* Virtuino Ethernet Shield web server example No2  
  * Example name = "Read Write virtual memory"
  * Created by Ilias Lamprou
- * Updated Jul 01 2016
+ * Updated May 18 2019
  * Before  running this code config the settings below as the instructions on the right
  * 
  * 
@@ -32,8 +32,10 @@
 #include "VirtuinoEthernet_WebServer.h"                           // Neccesary virtuino library for ethernet shield
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};                // Set the ethernet shield mac address.
-IPAddress ip(192, 168, 2, 150);                                   // Set the ethernet shield ip address. Check your gateway ip address first
-VirtuinoEthernet_WebServer virtuino(8000);                          // default port=8000
+IPAddress ip(192, 168, 1, 150);                                   // Set the ethernet shield ip address. Check your gateway ip address first
+
+EthernetServer VirtuinoServer(8000);                              // default port=8000
+VirtuinoEthernet_WebServer virtuino(&VirtuinoServer);  
  
 
 
@@ -42,17 +44,18 @@ VirtuinoEthernet_WebServer virtuino(8000);                          // default p
 //================================================================== setup
 //==================================================================
 //==================================================================
-void setup() 
-{
+void setup(){
   
   virtuino.DEBUG=true;                                            // set this value TRUE to enable the serial monitor status
   if (virtuino.DEBUG) Serial.begin(9600);                                             // Enable this line only if DEBUG=true
                                      
   Ethernet.begin(mac, ip);
-  
+  VirtuinoServer.begin();
   virtuino.password="1234";                                     // Set a password to your web server for more protection
                                                                 // avoid special characters like ! $ = @ # % & * on your password. Use only numbers or text characters
-                              
+  Serial.println("Server Ready");
+  Serial.println(Ethernet.localIP());                            
+                         
  
   
 //------ enter your setup code below
