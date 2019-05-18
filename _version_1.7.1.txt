@@ -1,0 +1,19 @@
+
+Library 1.71
+Bug fixed in VirtuinoEthernet_WebServer library for stable Webserver connection.
+Preparation for storing the variables in external SRAM (if available)
+### ATTENTION! Changed initialization! ###
+
+Library 1.70
+Bug fixed 
+
+Library 1.69
+Bug fixed in VirtuinoEsp8266_WebServer library  (Virtuino request in run() function)
+
+Library 1.68
+Bug fixed: Error on bluetooth library; Error response if value = 2
+
+Library 1.67
+Bug fixed: Supports any range of pwm pins
+
+ 
