@@ -1,4 +1,4 @@
-/* Virtuino ESP01 web server Library ver 1.70
+/* Virtuino ESP01 web server Library ver 1.7.1
  * Created by Ilias Lamprou
  * Updated NOE 11 2017
  * 
@@ -76,7 +76,7 @@
 #endif
 
 
-  #define  wf_firmwareCode  "!C00=1.70$"                 
+  #define  wf_firmwareCode  "!C00=1.7.1$"                 
   #define  wf_virtualDigitalMemorySize  32     // DV virtual memory size 
   #define  wf_virtualAnalogMemorySize  32      // V virtual memory size 
 

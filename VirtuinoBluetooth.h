@@ -1,4 +1,4 @@
-/* Virtuino bluetooth library ver 1.70
+/* Virtuino bluetooth library ver 1.7.1
  * Created by Ilias Lamprou
  * Updated NOE 16 2017
  * 
@@ -85,7 +85,7 @@
 #define bt_COMMAND_END_CHAR   '$'
 #define bt_COMMAND_ERROR       "E00="
 
-#define bt_firmwareCode "!C00=1.70$"                 
+#define bt_firmwareCode "!C00=1.7.1$"                 
 #define bt_TEXT_COMMAND_MAX_SIZE 200 
 
 
