@@ -1,6 +1,6 @@
-/* Virtuino ESP01 web server Library ver 1.7.1
+/* Virtuino ESP01 web server Library ver 1.8.0
  * Created by Ilias Lamprou
- * Updated NOE 11 2017
+ * Updated Aug 17 2019
  * 
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  */
@@ -24,10 +24,6 @@
 //  float vMemoryRead(int memoryIndex);                               read a value of  Virtuino memory             (memoryIndex=0..31, returned a float value
 //  run();                                                            neccesary command to communicate with Virtuino android app  (on start of void loop)
 //  int getPinValue(int pin);                                         read the value of a Pin. Usefull to read the value of a PWM pin
-//  void clearTextBuffer();                                       Clear the text received text buffer
-//  int textAvailable();                                          Check if there is text in the received buffer
-//  String getText(byte ID);                                      Read the text from Virtuino app
-//  void sendText(byte ID, String text);                          Send text to Virtuino app  
 
 
 #ifndef VirtuinoEsp8266_WebServer_h
@@ -76,7 +72,7 @@
 #endif
 
 
-  #define  wf_firmwareCode  "!C00=1.7.1$"                 
+  #define  wf_firmwareCode  "!C00=1.8.0$"                 
   #define  wf_virtualDigitalMemorySize  32     // DV virtual memory size 
   #define  wf_virtualAnalogMemorySize  32      // V virtual memory size 
 
@@ -120,16 +116,17 @@
   
   boolean DEBUG=false;
   String password=""; 
+  const char *NO_REPLY= "_NR_";
    
-  //-- Text Command public functions
-    void clearTextBuffer();
-    int textAvailable();
-    String getText(byte ID);
-    void sendText(byte ID, String text);
-    String espResponseBuffer="";
+  String espResponseBuffer="";
+    
   boolean waitForResponse(String target1,  int timeout);
 
-  
+
+  void setTextReceivedCallback(void (*callback)(uint8_t,String)){textReceivedHandler = callback;}
+  void setTextRequestedCallback(String (*callback)(uint8_t)){textRequestedHandler = callback;}
+ 
+ 
   private:
   
   void checkVirtuinoCommand(String* command);
@@ -153,16 +150,12 @@
    String espBuffer="";
    
    
-    //-- Text Command private functions
-    String textReceivedCommandBuffer="";
-    String textToSendCommandBuffer="";
-    String urlencode(String* str);
-    unsigned char h2int(char c);
-    String urldecode(String* str);
-    void clearTextByID(byte ID, String* textBuffer);
-    void addTextToReceivedBuffer(byte ID, String* text);
-
-    
+   String urlencode(String* str);
+   unsigned char h2int(char c);
+   String urldecode(String* str);
+  
+  void (*textReceivedHandler)(uint8_t,String);
+  String (*textRequestedHandler)(uint8_t); 
    
 #ifdef ESP8266_USE_SOFTWARE_SERIAL
     SoftwareSerial *espSerial; /* The UART to communicate with ESP01 */
@@ -174,5 +167,3 @@
 
 
 #endif
-
-

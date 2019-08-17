@@ -1,7 +1,7 @@
 /* Virtuino Ethernet Shield web server library
  * Created by Ilias Lamprou
- * Modify by Rico Schumann
- * Updated 16/05/2019
+ * Modified by Rico Schumann
+ * Updated 17/08/2019
  * 
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.javapapers.android.agrofarmlitetrial ???
  * Contact address for questions or comments: iliaslampr@gmail.com
@@ -56,11 +56,7 @@
                   lineBuffer.remove(0,pos+5);
                   if (DEBUG) Serial.println("\n\r LineBuffer="+lineBuffer);
                   checkVirtuinoCommand(&lineBuffer);
-                  if (textToSendCommandBuffer.length()>0){
-                     etResponseBuffer+=textToSendCommandBuffer;
-                     textToSendCommandBuffer="";
-                  }
-                   if (DEBUG) Serial.println("\n\r response="+etResponseBuffer);
+                  if (DEBUG) Serial.println("\n\r response="+etResponseBuffer);
                   delay(10);
                   client.flush();
                   client.println("HTTP/1.1 200 OK");
@@ -278,79 +274,6 @@ String VirtuinoEthernet_WebServer::urldecode(String* str){
    return encodedString;
 
 }
-//======================================================================================== clearTextBuffer
-//========================================================================================
-void VirtuinoEthernet_WebServer:: clearTextBuffer(){textReceivedCommandBuffer="";}
-
-//======================================================================================== clearTextBuffer
-//========================================================================================
-int VirtuinoEthernet_WebServer::  textAvailable(){return textReceivedCommandBuffer.length();}
-  
-//======================================================================================== getTextByID
-//========================================================================================
-String VirtuinoEthernet_WebServer:: getText(byte ID){
-   String returnedText="";
-   String ID_string ="";
-   ID_string+=et_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";       
-   int  pos=textReceivedCommandBuffer.indexOf(ID_string);
-   if (pos>=0) {
-      pos= textReceivedCommandBuffer.indexOf("=",pos);
-      int lastPos=textReceivedCommandBuffer.indexOf(et_COMMAND_END_CHAR,pos);
-      returnedText= textReceivedCommandBuffer.substring(pos+1,lastPos);
-      returnedText=urldecode(&returnedText);
-      clearTextByID(ID,&textReceivedCommandBuffer);
-   }
-   return returnedText;
-  }
-
-//======================================================================================== clearTextByID
-//========================================================================================
-void VirtuinoEthernet_WebServer:: clearTextByID(byte ID, String* textBuffer){
-   String ID_string ="";
-   ID_string+=et_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";                   // !ID3=
-  int  pos=textBuffer->indexOf(ID_string);
-   if (pos>=0) {
-      int lastPos= textBuffer->indexOf(et_COMMAND_END_CHAR,pos);
-      textBuffer->remove(pos,lastPos+1);
-   }
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoEthernet_WebServer::addTextToReceivedBuffer(byte ID, String* text){
-   clearTextByID(ID,&textReceivedCommandBuffer);
-   textReceivedCommandBuffer+=et_COMMAND_START_CHAR;
-   textReceivedCommandBuffer+= 'T';
-   if (ID<10) textReceivedCommandBuffer+= '0';
-   textReceivedCommandBuffer+=ID;
-   textReceivedCommandBuffer+= "=";
-   textReceivedCommandBuffer+= *text;
-   textReceivedCommandBuffer+=et_COMMAND_END_CHAR;
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoEthernet_WebServer::sendText(byte ID, String text){
-   clearTextByID(ID,&textToSendCommandBuffer);
-   textToSendCommandBuffer+=et_COMMAND_START_CHAR;
-   textToSendCommandBuffer+= 'T';
-   if (ID<10) textToSendCommandBuffer+= '0';
-   textToSendCommandBuffer+=ID;
-   textToSendCommandBuffer+= "=";
-   textToSendCommandBuffer+=urlencode(&text); 
-   textToSendCommandBuffer+=et_COMMAND_END_CHAR;
-}
-
-
-
 
 //======================================================================================== executeCommandFromApp
 //========================================================================================
@@ -367,23 +290,35 @@ void VirtuinoEthernet_WebServer::sendText(byte ID, String text){
    // At last we must reset the command state value to zero 
    //This is a system fuction. Don't change this code
       
-    String response=getErrorCommand(et_ERROR_UNKNOWN); 
+    String response="";//getErrorCommand(et_ERROR_UNKNOWN); 
     String pinString="";
     if (activeCommandPin<10) pinString = "0"+String(activeCommandPin);
     else pinString=String(activeCommandPin);
     float activeCommandValue=0;
      switch (activeCommandType) {
-      case 'T':                         
-            if ((activeCommandPin>=0) & (activeCommandPin < 100)){
-                response =et_COMMAND_START_CHAR;
-                response +=activeCommandType;
-                response +=pinString;
-                response +="=";
-                response +=*commandString;
-                response +=et_COMMAND_END_CHAR;  // response 
-                addTextToReceivedBuffer(activeCommandPin,commandString);
-            }
-          break;
+      case 'T':        
+      if ((activeCommandPin>=0) & (activeCommandPin < 100)){
+                
+                if (returnInfo) {
+                  if (textRequestedHandler==NULL) return;
+                  String testReply = textRequestedHandler(activeCommandPin);
+                  if (testReply==NO_REPLY) return;
+                  response="";
+                  response =et_COMMAND_START_CHAR;
+                  response +=activeCommandType;
+                  response +=pinString;
+                  response +="=";
+                  response += urlencode(&testReply);
+                  response +=et_COMMAND_END_CHAR;  // response 
+                }
+                else {
+                  if (textReceivedHandler!=NULL) {
+                    String decodeStr=urldecode(commandString);
+                    textReceivedHandler(activeCommandPin,decodeStr);
+                  }
+                }
+            }                 
+           break;
       case 'I':                         
             if ((activeCommandPin>=0) & (activeCommandPin < et_arduinoPinsSize))
               response =et_COMMAND_START_CHAR+String(activeCommandType)+pinString+"="+String(digitalRead(activeCommandPin))+et_COMMAND_END_CHAR;  // response 
@@ -455,7 +390,6 @@ void VirtuinoEthernet_WebServer::sendText(byte ID, String text){
                       if (activeCommandValue==1)response =et_firmwareCode;//"!C00="+String(et_firmwareCode)"+"$";//et_COMMAND_START_CHAR+"C"+pinString+"=1"+et_COMMAND_END_CHAR;     // return firmware version
                       break;
            }
-        //   Serial.println("=== response="+response);
         etResponseBuffer += response;
        
   }

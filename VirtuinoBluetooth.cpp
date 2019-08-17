@@ -1,6 +1,6 @@
 /* Virtuino bluetooth library
   * Created by Ilias Lamprou
- * Updated Noe 16 2017
+ * Updated Aug 17 2019
  * 
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  * Video tutorial link: https://www.youtube.com/watch?v=CYR_jigRkgk
@@ -94,10 +94,6 @@ void VirtuinoBluetooth::checkIfIOsHaveChanged(){
               if (commandBuffer.length() > 150)  sendCommandResponse('E',0,String(bt_ERROR_COMMAND));
               else{
                   checkVirtuinoCommand(&commandBuffer);
-                  if (textToSendCommandBuffer.length()>0) {
-                    btResponseBuffer+=textToSendCommandBuffer;
-                    textToSendCommandBuffer="";
-                  }
                   if (DEBUG) Serial.println("Response= "+btResponseBuffer);
                   BTserial->print(btResponseBuffer);
                   btResponseBuffer="";
@@ -121,78 +117,6 @@ void VirtuinoBluetooth::urldecode(String* str){
     str->replace("%24","$");
 }
 
-//======================================================================================== clearTextBuffer
-//========================================================================================
-void VirtuinoBluetooth:: clearTextBuffer(){textReceivedCommandBuffer="";}
-
-//======================================================================================== clearTextBuffer
-//========================================================================================
-int VirtuinoBluetooth::  textAvailable(){return textReceivedCommandBuffer.length();}
-  
-//======================================================================================== getTextByID
-//========================================================================================
-String VirtuinoBluetooth:: getText(byte ID){
-   String returnedText="";
-   String ID_string ="";
-   ID_string+=bt_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";       
-   int  pos=textReceivedCommandBuffer.indexOf(ID_string);
-   if (pos>=0) {
-      pos= textReceivedCommandBuffer.indexOf("=",pos);
-      int lastPos=textReceivedCommandBuffer.indexOf(bt_COMMAND_END_CHAR,pos);
-      returnedText= textReceivedCommandBuffer.substring(pos+1,lastPos);
-      urldecode(&returnedText);
-      clearTextByID(ID,&textReceivedCommandBuffer);
-   }
-   return returnedText;
-
-  }
-
-//======================================================================================== clearTextByID
-//========================================================================================
-void VirtuinoBluetooth:: clearTextByID(byte ID, String* textBuffer){
-   String ID_string ="";
-   ID_string+=bt_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";                   // !ID3=
-   int  pos=textBuffer->indexOf(ID_string);
-   if (pos>=0) {
-      int lastPos= textBuffer->indexOf(bt_COMMAND_END_CHAR,pos);
-      textBuffer->remove(pos,lastPos+1);
-   }
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoBluetooth::addTextToReceivedBuffer(byte ID, String* text){
-   clearTextByID(ID,&textReceivedCommandBuffer);
-   textReceivedCommandBuffer+=bt_COMMAND_START_CHAR;
-   textReceivedCommandBuffer+= 'T';
-   if (ID<10) textReceivedCommandBuffer+= '0';
-   textReceivedCommandBuffer+=ID;
-   textReceivedCommandBuffer+= "=";
-   textReceivedCommandBuffer+= *text;
-   textReceivedCommandBuffer+=bt_COMMAND_END_CHAR;
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoBluetooth::sendText(byte ID, String text){
-   clearTextByID(ID,&textToSendCommandBuffer);
-   textToSendCommandBuffer+=bt_COMMAND_START_CHAR;
-   textToSendCommandBuffer+= 'T';
-   if (ID<10) textToSendCommandBuffer+= '0';
-   textToSendCommandBuffer+=ID;
-   textToSendCommandBuffer+= "=";
-   urlencode(&text);
-   textToSendCommandBuffer+=text; 
-   textToSendCommandBuffer+=bt_COMMAND_END_CHAR;
- }
 
 //====================================================================================== checkBluetoothCommand
 void  VirtuinoBluetooth::checkVirtuinoCommand(String* command){
@@ -272,8 +196,30 @@ void  VirtuinoBluetooth::checkVirtuinoCommand(String* command){
     float activeCommandValue=0;
     
     switch (activeCommandType) {
-        case 'T':                         
-            if ((activeCommandPin>=0) & (activeCommandPin < 100)){
+        case 'T':    
+         if ((activeCommandPin>=0) & (activeCommandPin < 100)){
+                if (returnInfo) {
+                  if (textRequestedHandler==NULL) return;
+                  String testReply = textRequestedHandler(activeCommandPin);
+                  if (testReply==NO_REPLY) return;
+                  response="";
+                  response =bt_COMMAND_START_CHAR;
+                  response +=activeCommandType;
+                  response +=pinString;
+                  response +="=";
+                  urlencode(&testReply);
+                  response += testReply;
+                  response +=bt_COMMAND_END_CHAR;  // response 
+                  Serial.println("==== response"+response);
+                }
+                else {
+                  if (textReceivedHandler!=NULL) {
+                   urldecode(commandString);
+                   textReceivedHandler(activeCommandPin,*commandString);
+                  }
+                }    
+         }                 
+       /*     if ((activeCommandPin>=0) & (activeCommandPin < 100)){
                 response="";
                 response +=bt_COMMAND_START_CHAR;
                 response +=activeCommandType;
@@ -283,7 +229,7 @@ void  VirtuinoBluetooth::checkVirtuinoCommand(String* command){
                 response +=bt_COMMAND_END_CHAR;  // response 
               //urldecode(commandString);
                addTextToReceivedBuffer(activeCommandPin,commandString);
-            }
+            }*/
           break;
       case 'I':                      
             if ((activeCommandPin>=0) & (activeCommandPin < bt_arduinoPinsSize))
@@ -435,11 +381,7 @@ float VirtuinoBluetooth::getCommandValue(String* aCommand){
     s+=commandValueString;
     s+=bt_COMMAND_END_CHAR;
     
-    if (textToSendCommandBuffer.length()>0) {
-      s+=textToSendCommandBuffer;
-     
-      textToSendCommandBuffer="";
-    }
+    
     BTserial->print(s);
     delay(10);              
 }
@@ -506,6 +448,3 @@ void VirtuinoBluetooth::vDelay(long milliseconds){
   long timeStart=millis();
   while (millis()-timeStart<milliseconds) run();
 }
-
-
-

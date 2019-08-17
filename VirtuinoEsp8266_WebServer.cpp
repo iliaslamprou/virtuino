@@ -1,6 +1,6 @@
  /* Virtuino ESP8266 web server Library
  * Created by Ilias Lamprou
- * Updated AUG 01 2016
+ * Updated Aug 17 2019
  * 
  * Download latest Virtuino android app from the link:  https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  * Contact address for questions or comments: iliaslampr@gmail.com
@@ -71,10 +71,6 @@ VirtuinoEsp8266_WebServer::VirtuinoEsp8266_WebServer(HardwareSerial &uart): espS
               if (pos!=-1){                                   // We have a GET message
                   espBuffer.remove(0,pos+5);
                   checkVirtuinoCommand(&espBuffer);
-             if (textToSendCommandBuffer.length()>0){
-                     espResponseBuffer+=textToSendCommandBuffer;
-                     textToSendCommandBuffer="";
-                  }     
                   boolean b=wifiSendData(connectionId,&espResponseBuffer);
                   espResponseBuffer="";
                   clearESP_buffer(50);
@@ -146,7 +142,12 @@ void  VirtuinoEsp8266_WebServer::createLocalESP8266_wifiServer(String wifiNetwor
      waitForResponse("OK",1000);           
 }
 
-
+//========================================================================================
+boolean VirtuinoEsp8266_WebServer::esp8266_setIP(byte a1, byte a2, byte a3, byte a4){
+    clearESP_buffer(100);    // clear esp buffer
+    espSerial->println("AT+CIPSTA=\""+String(a1)+"."+String(a2)+"."+String(a3)+"."+String(a4)+"\"");
+    return waitForResponse("OK",3000);
+}
 
 //====================================================================================== checkVirtuinoCommand
 //======================================================================================
@@ -447,85 +448,6 @@ String VirtuinoEsp8266_WebServer::urldecode(String* str){
    return encodedString;
 }
 
- //======================================================================================== esp8266_setIP
-//========================================================================================
-boolean VirtuinoEsp8266_WebServer::esp8266_setIP(byte a1, byte a2, byte a3, byte a4){
-    clearESP_buffer(100);    // clear esp buffer
-    espSerial->println("AT+CIPSTA=\""+String(a1)+"."+String(a2)+"."+String(a3)+"."+String(a4)+"\"");
-    return waitForResponse("OK",3000);
-}
-//======================================================================================== clearTextBuffer
-//========================================================================================
-void VirtuinoEsp8266_WebServer:: clearTextBuffer(){textReceivedCommandBuffer="";}
-
-//======================================================================================== clearTextBuffer
-//========================================================================================
-int VirtuinoEsp8266_WebServer::  textAvailable(){return textReceivedCommandBuffer.length();}
-  
-//======================================================================================== getTextByID
-//========================================================================================
-String VirtuinoEsp8266_WebServer:: getText(byte ID){
-   String returnedText="";
-   String ID_string ="";
-   ID_string+=wf_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";       
-   int  pos=textReceivedCommandBuffer.indexOf(ID_string);
-   if (pos>=0) {
-      pos= textReceivedCommandBuffer.indexOf("=",pos);
-      int lastPos=textReceivedCommandBuffer.indexOf(wf_COMMAND_END_CHAR,pos);
-      returnedText= textReceivedCommandBuffer.substring(pos+1,lastPos);
-      returnedText=urldecode(&returnedText);
-      clearTextByID(ID,&textReceivedCommandBuffer);
-   }
-   return returnedText;
-  }
-
-//======================================================================================== clearTextByID
-//========================================================================================
-void VirtuinoEsp8266_WebServer:: clearTextByID(byte ID, String* textBuffer){
-   String ID_string ="";
-   ID_string+=wf_COMMAND_START_CHAR;
-   ID_string+='T';
-   if (ID<10) ID_string+='0';
-   ID_string+=ID;
-   ID_string+="=";                   // !ID3=
-  int  pos=textBuffer->indexOf(ID_string);
-   if (pos>=0) {
-      int lastPos= textBuffer->indexOf(wf_COMMAND_END_CHAR,pos);
-      textBuffer->remove(pos,lastPos+1);
-   }
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoEsp8266_WebServer::addTextToReceivedBuffer(byte ID, String* text){
-   clearTextByID(ID,&textReceivedCommandBuffer);
-   textReceivedCommandBuffer+=wf_COMMAND_START_CHAR;
-   textReceivedCommandBuffer+= 'T';
-   if (ID<10) textReceivedCommandBuffer+= '0';
-   textReceivedCommandBuffer+=ID;
-   textReceivedCommandBuffer+= "=";
-   textReceivedCommandBuffer+= *text;
-   textReceivedCommandBuffer+=wf_COMMAND_END_CHAR;
-}
-
-//======================================================================================== addTextToBuffer
-//========================================================================================
-void VirtuinoEsp8266_WebServer::sendText(byte ID, String text){
-   clearTextByID(ID,&textToSendCommandBuffer);
-   textToSendCommandBuffer+=wf_COMMAND_START_CHAR;
-   textToSendCommandBuffer+= 'T';
-   if (ID<10) textToSendCommandBuffer+= '0';
-   textToSendCommandBuffer+=ID;
-   textToSendCommandBuffer+= "=";
-   textToSendCommandBuffer+=urlencode(&text); 
-   textToSendCommandBuffer+=wf_COMMAND_END_CHAR;
-  
-}
-
 //======================================================================================== executeCommandFromApp
 //========================================================================================
   void VirtuinoEsp8266_WebServer::executeReceivedCommand(char activeCommandType, int activeCommandPin ,String* commandString, boolean returnInfo){
@@ -546,15 +468,25 @@ void VirtuinoEsp8266_WebServer::sendText(byte ID, String text){
     float activeCommandValue=0;
      switch (activeCommandType) {
       case 'T':                         
-            if ((activeCommandPin>=0) & (activeCommandPin < 100)){
-                response="";
-                response +=wf_COMMAND_START_CHAR;
-                response +=activeCommandType;
-                response +=pinString;
-                response +="=";
-                response +=*commandString;
-                response +=wf_COMMAND_END_CHAR;  // response 
-                addTextToReceivedBuffer(activeCommandPin,commandString);
+             if ((activeCommandPin>=0) & (activeCommandPin < 100)){
+                if (returnInfo) {
+                  if (textRequestedHandler==NULL) return;
+                  String testReply = textRequestedHandler(activeCommandPin);
+                  if (testReply==NO_REPLY) return;
+                  response="";
+                  response =wf_COMMAND_START_CHAR;
+                  response +=activeCommandType;
+                  response +=pinString;
+                  response +="=";
+                  response += urlencode(&testReply);
+                  response +=wf_COMMAND_END_CHAR;  // response 
+                }
+                else {
+                  if (textReceivedHandler!=NULL) {
+                    String decodeStr = urldecode(commandString);
+                    textReceivedHandler(activeCommandPin,decodeStr);
+                  }
+                }
             }
           break;
       case 'I':                         

@@ -1,6 +1,6 @@
-/* Virtuino bluetooth library ver 1.7.1
+/* Virtuino bluetooth library ver 1.8.0
  * Created by Ilias Lamprou
- * Updated NOE 16 2017
+ * Updated Aug 17 2019
  * 
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.virtuino_automations.virtuino
  * Video tutorial link: https://www.youtube.com/watch?v=CYR_jigRkgk
@@ -17,10 +17,6 @@
 *  float vMemoryRead(int analogMemoryIndex)                      read the value of  Virtuino analog memory    (analogMemoryIndex=0..31, returned value range = 0..1023)
 *  run()                                                         neccesary command to communicate with Virtuino android app  (on start of void loop)
 *  int getPinValue(int pin)                                      read the value of a Pin. Usefull for PWM pins
-*  void clearTextBuffer();                                       Clear the text received text buffer
-*  int textAvailable();                                          Check if there is text in the received buffer
-*  String getText(byte ID);                                      Read the text from Virtuino app
-*  void sendText(byte ID, String text);                          Send text to Virtuino app  
 */
 
 
@@ -85,7 +81,7 @@
 #define bt_COMMAND_END_CHAR   '$'
 #define bt_COMMAND_ERROR       "E00="
 
-#define bt_firmwareCode "!C00=1.7.1$"                 
+#define bt_firmwareCode "!C00=1.8.0$"                 
 #define bt_TEXT_COMMAND_MAX_SIZE 200 
 
 
@@ -114,13 +110,13 @@
   boolean DEBUG=false;
   long lastCommunicationTime;
   void vDelay(long milliseconds);
+  const char *NO_REPLY= "_NR_";
 
-  //-- Text Command functions
-  void clearTextBuffer();
-  int textAvailable();
-  String getText(byte ID);
-  void sendText(byte ID, String text);
   String btResponseBuffer="";
+ 
+
+  void setTextReceivedCallback(void (*callback)(uint8_t,String)){textReceivedHandler = callback;}
+  void setTextRequestedCallback(String (*callback)(uint8_t)){textRequestedHandler = callback;}
   
   
   private:
@@ -146,12 +142,10 @@
   bool  connectedStatus=true;
 
   //-- Text Command functions
-  String textReceivedCommandBuffer="";
-  String textToSendCommandBuffer="";
   void urlencode(String* str);
   void urldecode(String* str);
-  void clearTextByID(byte ID, String* textBuffer);
-  void addTextToReceivedBuffer(byte ID, String* text);
+  void (*textReceivedHandler)(uint8_t,String);
+  String (*textRequestedHandler)(uint8_t); 
   
   #ifdef BLUETOOTH_USE_SOFTWARE_SERIAL
       SoftwareSerial *BTserial;
@@ -165,5 +159,3 @@
 
  
 #endif
-
-
