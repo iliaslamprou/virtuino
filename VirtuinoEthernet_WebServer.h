@@ -1,7 +1,7 @@
-/* Virtuino Ethernet Shield web server library ver 1.7.1
+/* Virtuino Ethernet Shield web server library ver 1.8.0
  * Created by Ilias Lamprou
- * Modify by Rico Schumann
- * Updated 16/05/2019
+ * Modified by Rico Schumann
+ * Updated 17/08/2019
  * 
  * Download latest Virtuino android app from the link: https://play.google.com/store/apps/details?id=com.javapapers.android.agrofarmlitetrial ???
  * Getting starting link:
@@ -19,10 +19,6 @@
 //  float vMemoryRead(int memoryIndex);                               read a value of  Virtuino memory             (memoryIndex=0..31, returned a float value
 //  run();                                                            neccesary command to communicate with Virtuino android app  (on start of void loop)
 //  int getPinValue(int pin);                                         read the value of a Pin. Usefull to read the value of a PWM pin
-//  void clearTextBuffer();                                       Clear the text received text buffer
-//  int textAvailable();                                          Check if there is text in the received buffer
-//  String getText(byte ID);                                      Read the text from Virtuino app
-//  void sendText(byte ID, String text);                          Send text to Virtuino app  
 
 
 
@@ -70,7 +66,7 @@
 
 
 
-  #define  et_firmwareCode  "!C00=1.7.1$"                 
+  #define  et_firmwareCode  "!C00=1.8.0$"                 
   #define  et_virtualDigitalMemorySize  32       // DV virtual memory size 
   #define  et_virtualAnalogMemorySize  32        // V virtual memory size 
 
@@ -108,14 +104,11 @@
     String password=""; 
     unsigned long lastCommunicationTime;
     
-    //-- Text Command public functions
-    void clearTextBuffer();
-    int textAvailable();
-    String getText(byte ID);
-    void sendText(byte ID, String text);
+    void setTextReceivedCallback(void (*callback)(uint8_t,String)){textReceivedHandler = callback;}
+    void setTextRequestedCallback(String (*callback)(uint8_t)){textRequestedHandler = callback;}
+
     String etResponseBuffer="";
-  
-  
+    const char *NO_REPLY= "_NR_";
     private:
 	  EthernetServer *MyServer; 
     void checkVirtuinoCommand(String* command);
@@ -131,17 +124,16 @@
     byte analogInputPinsMap[arduinoAnalogPinsSize]  = analogInputPinsMap_  ;
     int serverPort=80;
     String lineBuffer="";
-    
 
-    //-- Text Command private functions
-    String textReceivedCommandBuffer="";
-    String textToSendCommandBuffer="";
+    
+    //-- Text Command functions
     String urlencode(String* str);
     unsigned char h2int(char c);
     String urldecode(String* str);
-    void clearTextByID(byte ID, String* textBuffer);
-    void addTextToReceivedBuffer(byte ID, String* text);
-
+    
+    void (*textReceivedHandler)(uint8_t,String);
+    String (*textRequestedHandler)(uint8_t); 
+   
   
  };
 
